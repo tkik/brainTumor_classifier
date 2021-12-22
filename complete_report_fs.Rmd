@@ -1,0 +1,78 @@
+---
+title: "Report, methylation classifier"
+author: 
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+params: 
+  sentrix_id: sentrix_id
+  path: path
+  sample_identifier: sample_identifier
+  gender: gender
+  material_type: material_type
+  supplier_diagnosis: supplier_diagnosis
+---
+
+
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+
+```{r, eval=T}
+
+sentrix_id <- params$sentrix_id
+path <- params$path
+sample_identifier <- params$sample_identifier
+gender <- params$gender  
+material_type <-  params$material_type
+supplier_diagnosis <- params$supplier_diagnosis
+
+if (!(material_type %in% c("FFPE", "Frozen")))
+  stop("The material type has to be either FFPE or Frozen.")
+
+
+```
+
+
+
+```{r}
+
+library(minfi)
+library(flextable)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+
+```
+
+
+
+
+```{r, processing_1}
+filepath <- file.path(path,sentrix_id)
+RGset <- read.metharray(filepath,verbose=TRUE )
+
+message("OK!")
+```
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+
+
+```{r}
+df1 <- data.frame(V1=c("Sample identifier: ", "Sentrix ID: ", "Material type:", "Gender: ", "Supplier diagnosis: "), 
+                 V2=c(sample_identifier, sentrix_id, material_type, gender, supplier_diagnosis))
+ft1 <- flextable(df1) %>% 
+  delete_part( part = "header") %>% 
+  theme_alafoli() %>% 
+  bold(j=2)
+kable(df1,  col.names = NULL) %>%
+  kable_styling(full_width = FALSE, position = "float_left")
+
+
+```
+
+
+
+
