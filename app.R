@@ -6,6 +6,8 @@ library(shinyjs)
 options(shiny.maxRequestSize=30*1024^2) #  for file uploading size
 source('scripts/functions.R', echo=TRUE)
 
+updata_folder <<- "up_data/"
+
 ui <- fluidPage(
   useShinyjs(),
   # tags$head(tags$style(HTML("pre { white-space: pre-wrap; }"))),
@@ -22,21 +24,24 @@ ui <- fluidPage(
     fileInput("filein", "Choose .idat files",
               multiple = TRUE,
               accept = c(".idat", ".idat.gz")),
-   
+    
+    disabled(actionButton("clear", "Clear frame")),
+    
     # Horizontal line ----
     tags$hr(),
     
-    radioButtons("radio_gen","Gender", c("Male" = "Male", "Female" = "Female",
-                                         "Other" = "Other"), inline=T),
-    radioButtons("radio_mt","Matherial type", c("FFPE" = "FFPE", "Frozen" = "Frozen",
-                                         "Other" = "Other"), inline=T),
+    radioButtons("radio_gen","Gender", 
+                 c("Male" = "Male", "Female" = "Female","Other/not given" = "Other/not given"), 
+                 selected = "Other/not given", inline=T),
+    radioButtons("radio_mt","Matherial type", 
+                 c("FFPE" = "FFPE", "Frozen" = "Frozen"), inline=T),
    
     tags$hr(), # Horizontal line ----
     h4("2 Validate your datafile"),
     disabled(actionButton("validate", "Validate")),
     br(),
     textOutput("val_text"),
-    #textOutput(test),//
+    #textOutput(test), #tmp for debug/mc
     #textOutput("test1"),
     
     # Horizontal line ----
@@ -51,50 +56,60 @@ ui <- fluidPage(
     # Output: Report ----
     htmlOutput("report_html"),
     
-    disabled(downloadButton("download", "Download"))
+    hidden(downloadButton("download", "Download"))
   )
 )
 
 server <- function(input, output, session) {
-  
-  #disable(input$validate)
-  #disable(input$run)  
+ 
+  sentrix_id <<- NULL # non-reactive global var (will created at infile action)
 
   # text after validation button
   rval_text <- reactiveVal(" ")
   output$val_text = renderText({rval_text() })
 
   filepath <- reactive({
+    #' return path to ONE file + resave with correct names 
     infile <- input$filein
     # resave with correct name - temp filepath doesn works in read.metharray
-    if(!dir.exists("up_data/")){
-     dir.create("up_data")
+    if(!dir.exists(updata_folder)){
+     dir.create(updata_folder)
     } 
-    file.copy(input$filein$datapath, paste0("up_data/", input$filein$name))
-    cat("Copied:",file.exists(paste0("up_data/", input$filein$name)))
-    cat(paste0("up_data/", input$filein$name))
+    file.copy(input$filein$datapath, paste0(updata_folder, input$filein$name))
+    cat("Copied:",file.exists(paste0(updata_folder, input$filein$name)), "\n")
+    cat(paste0(updata_folder, input$filein$name), "\n")
     if (is.null(infile)){
       return(NULL)      
     }
     # return one filename (including _Grn.idat or _Red.idat) for read.metharray()
-    paste0("up_data/", input$filein$name[1])
+    paste0(updata_folder, input$filein$name[1])
   })
   
-  ### meta data for test output ###----
+  ### TMP meta data for test output ###----
   output$test <- renderText(({filepath()}))
   #output$test1 <- renderText(({input$filein$name}))
   ###----
   
-  # enable Validate button after file was uploaded
+  # Action after file was uploaded: enable validate and get sentrix id (first)
   observeEvent(input$filein$datapath,
                {
                  enable("validate")
+                 enable("clear")
+                 fpath <<- filepath()
+                 sentrix_id <<- gsub(updata_folder,"",fpath)
+                 sentrix_id <<- gsub("_Grn.idat.*|_Red.idat.*","",sentrix_id)
+                 cat("Sentrix_id:", sentrix_id, "\n")
                })
+  
+  # Action for Clear frame button
+  observeEvent(input$clear, {
+    clean_dir(dir = updata_folder)
+    disable("clear")
+  })
   
   # Action for Validate button
   observeEvent(input$validate, {
     
-    fpath <<- filepath()
     check_res <- validate_files()
     # return warning messages if need
     val_warn_text <- character()
@@ -131,8 +146,8 @@ server <- function(input, output, session) {
     withProgress(message = 'Run classifier..', value = 0, {
       test_pipline(path = fpath)
       
-      render_simp_report(path = fpath, gender = input$radio_gen, 
-                         material_type = input$radio_mt)
+      render_simp_report(path = fpath, sentrix_id = sentrix_id,
+                         gender = input$radio_gen, material_type = input$radio_mt)
       
       # run classifier here
       # add output here
@@ -142,18 +157,22 @@ server <- function(input, output, session) {
       
     })
     
-    # convert final report to pdf
-    pagedown:: chrome_print("report/report.html", output = "report/report_final.pdf")
+    clean_dir(updata_folder)
+    disable("clean")
     
-    enable("download")
+    # convert final report to pdf
+    pagedown:: chrome_print("report/report.html", 
+                            output = paste0("report/report_", sentrix_id,".pdf"))
+    
+    shinyjs::show("download")
   })
   
   output$download <- downloadHandler(
     filename = function() {
-      "report.pdf"
+      paste0("report/report_", sentrix_id,".pdf")
     },
     content = function(file) {
-      file.copy("report/report_final.pdf", file)
+      file.copy(paste0("report/report_", sentrix_id,".pdf"), file)
     }
   )
   

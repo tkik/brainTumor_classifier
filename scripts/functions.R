@@ -9,11 +9,10 @@ library(knitr)
 library(kableExtra)
 library(pagedown)
 
-render_simp_report = function(path, gender, material_type, updata_folder = "up_data/") {
+render_simp_report = function(path, sentrix_id,gender, material_type, 
+                              updata_folder = "up_data/") {
   #path="data"
   #sentrix_id ="GSM2940725_10003886252_R05C02"
-  sentrix_id <- gsub(updata_folder,"",path)
-  sentrix_id <- gsub("_Grn.idat.*|_Red.idat.*","",sentrix_id)
   #gender="Female"
   #material_type = "FFPE"
   supplier_diagnosis = "GBM, RTK II"
@@ -60,7 +59,7 @@ validate_files <- function(updata_folder = "up_data/"){
   #' @description Check if user loaded two Red and Grn files with the same
   #' sentrix_id. Files were copied to `updata_folder` directory. One filename 
   #' (including _Grn.idat or _Red.idat) will used for read.metharray()
-  #' @return TRUE or FALSE
+  #' @return list of checkers with TRUE or FALSE
   #' @author mchepeleva
 
   check_res <- list(Red = F, Grn = F, sentrix_id = F)
@@ -68,7 +67,7 @@ validate_files <- function(updata_folder = "up_data/"){
   
   check_res$Red <- sum(base::grepl("_Red.idat$|_Red.idat.gz$", files_list)) > 0
   check_res$Grn <- sum(base::grepl("_Grn.idat$|_Grn.idat.gz$", files_list)) > 0
-  
+  cat("Check Red:", check_res$Red, "\nCheck Grn:", check_res$Grn, "\n")
   sids <- unlist(lapply(files_list, function(x) gsub("_Grn.idat.*|_Red.idat.*", "", x)))
   if(sum(sids != sids[1]) == 0){
     check_res$sentrix_id <- T
@@ -78,4 +77,12 @@ validate_files <- function(updata_folder = "up_data/"){
         "\nsentrix_ids are:", sids)
   }
  return(check_res)
+}
+
+clean_dir <- function(dir = NULL){
+  #' @title Delete all files from `dir`
+  if(!is.null(dir)){
+    do.call(file.remove, list(list.files(dir, full.names = TRUE)))
+    cat("Clear up_dir\n")
+  }
 }
