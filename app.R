@@ -63,7 +63,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
  
   sentrix_id <<- NULL # non-reactive global var (will created at infile action)
-
+  check_res <<- NULL
   # text after validation button
   rval_text <- reactiveVal(" ")
   output$val_text = renderText({rval_text() })
@@ -103,14 +103,22 @@ server <- function(input, output, session) {
   
   # Action for Clear frame button
   observeEvent(input$clear, {
+    cat("Event Clear form\n")
     clean_dir(dir = updata_folder)
+    reset('filein')
+    #removeUI(selector = "#report_html") always
+    hide("report_html")
     disable("clear")
+    disable("validate") 
+    disable("run")
+    rval_text(character())
+    shinyjs::hide("download")
   })
   
   # Action for Validate button
   observeEvent(input$validate, {
     
-    check_res <- validate_files()
+    check_res <<- validate_files()
     # return warning messages if need
     val_warn_text <- character()
     if(check_res$Red == T & check_res$Grn == T){
@@ -142,6 +150,11 @@ server <- function(input, output, session) {
   }
   
   observeEvent(input$run, {
+    # if not validated - out (second run click f example)
+    if(is.null(check_res)){
+      # ..text?
+      return()
+    } # else .. revalidate? - solved by disabling Run
     
     withProgress(message = 'Run classifier..', value = 0, {
       test_pipline(path = fpath)
@@ -154,17 +167,21 @@ server <- function(input, output, session) {
       #...
       
       output$report_html <- renderUI({getPage()})
-      
+      shinyjs::show("report_html")
     })
-    
-    clean_dir(updata_folder)
-    disable("clean")
     
     # convert final report to pdf
     pagedown:: chrome_print("report/report.html", 
                             output = paste0("report/report_", sentrix_id,".pdf"))
     
     shinyjs::show("download")
+    
+    cat("Reset app to be ready for next iteration\n")
+    clean_dir(updata_folder)
+    disable("clean")
+    reset('filein')
+    disable("validate")
+    disable("run")
   })
   
   output$download <- downloadHandler(
