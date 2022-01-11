@@ -40,7 +40,7 @@ ui <- fluidPage(
     h4("2 Validate your datafile"),
     disabled(actionButton("validate", "Validate")),
     br(),
-    textOutput("val_text"),
+    htmlOutput("val_text"),
     #textOutput(test), #tmp for debug/mc
     #textOutput("test1"),
     
@@ -124,23 +124,26 @@ server <- function(input, output, session) {
     if(check_res$Red == T & check_res$Grn == T){
       if(check_res$sentrix_id == F){
         # set new value to reactiveVal
-        val_warn_text <- paste0(val_warn_text, "Files must have the same sentrix_id.\n
-                                                  Please upload the correct files.")
-        session$sendCustomMessage(type = 'testmessage',
-                                  message = 'Files must have the same sentrix_id!')
+        val_warn_text <- paste0("<span style=\"color:red\">",
+                            val_warn_text, "Files must have the same sentrix_id!\n
+                                                  Please upload the correct files.</span>")
+        # session$sendCustomMessage(type = 'testmessage',
+        #                           message = 'Files must have the same sentrix_id!')
         
       } else{
-        val_warn_text <- paste0(val_warn_text, "Files verification passed successfully.")
+        val_warn_text <- paste0("<span style=\"color:SeaGreen\">",
+                                val_warn_text, "Files verification passed successfully.</span>")
         enable("run")
       }
     } else{
+      val_warn_text <- paste0(val_warn_text, "<span style=\"color:red\">")
       if(check_res$Red == F){
         val_warn_text <- paste0(val_warn_text, "_Red.idat file not found!\n")
       }
       if(check_res$Grn == F){
         val_warn_text <- paste0(val_warn_text, "_Grn.idat file not found!\n")
       }
-      val_warn_text <- paste0(val_warn_text, "Please upload the correct files.")
+      val_warn_text <- paste0(val_warn_text, "Please upload the correct files.</span>")
     }
     rval_text(val_warn_text)
   })
