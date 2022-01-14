@@ -56,7 +56,8 @@ ui <- fluidPage(
     # Output: Report ----
     htmlOutput("report_html"),
     
-    hidden(downloadButton("download", "Download"))
+    column(6, hidden(downloadButton("download", "Download"))),
+    column(6, hidden(actionButton("clear2", "Clear All")))
   )
 )
 
@@ -102,7 +103,7 @@ server <- function(input, output, session) {
                })
   
   # Action for Clear frame button
-  observeEvent(input$clear, {
+  observeEvent(list(input$clear, input$clear2), {
     cat("Event Clear form\n")
     clean_dir(dir = updata_folder)
     reset('filein')
@@ -113,6 +114,7 @@ server <- function(input, output, session) {
     disable("run")
     rval_text(character())
     shinyjs::hide("download")
+    shinyjs::hide("clear2")
   })
   
   # Action for Validate button
@@ -169,6 +171,9 @@ server <- function(input, output, session) {
       # add output here
       #...
       
+      # Use this for increase progress by 20% and change message in brogress bar
+      # incProgress(0.2, detail = "Do something")
+      
       output$report_html <- renderUI({getPage()})
       shinyjs::show("report_html")
     })
@@ -178,6 +183,7 @@ server <- function(input, output, session) {
                             output = paste0("report/report_", sentrix_id,".pdf"))
     
     shinyjs::show("download")
+    shinyjs::show("clear2")
     
     cat("Reset app to be ready for next iteration\n")
     clean_dir(updata_folder)
