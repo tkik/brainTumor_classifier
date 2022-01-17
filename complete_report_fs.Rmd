@@ -36,28 +36,22 @@ if (!(material_type %in% c("FFPE", "Frozen")))
 ```
 
 
-
 ```{r}
-
-library(minfi)
-library(flextable)
-library(dplyr)
-library(knitr)
-library(kableExtra)
-
-
+# library(minfi)
+# library(flextable)
+# library(dplyr)
+# library(knitr)
+# library(kableExtra)
 ```
-
-
 
 
 ```{r, processing_1}
-filepath <- file.path(path,sentrix_id)
+#filepath <- file.path(path,sentrix_id) # if path "" - error
+#filepath <- "GSM2940725_10003886252_R05C02"
+filepath <- (path) # for shiny app
 RGset <- read.metharray(filepath,verbose=TRUE )
-
 message("OK!")
-```
-                                                                                                                                                                                                                                                                                                                                                                                                                                           
+```                                                                                       
 
 
 ```{r}
